@@ -23,6 +23,7 @@
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="true" />
         <module name="activemq_sample" />
+        <module name="simplejms" />
       </profile>
     </annotationProcessing>
   </component>
