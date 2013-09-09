@@ -15,45 +15,57 @@ class MessageHandler
 
   def onMessage(serialized_message)
     message_body = serialized_message.get_content.get_data.inject("") { |body, byte| body << byte }
-    puts message_body
+    @processor.on_message message_body
     if message_body =~ /throw/
       raise Exception.new "Throwing from onMessage"
     end
   end
 
-  def run
+  def initialize(processor)
+    @processor = processor
     factory = ActiveMQConnectionFactory.new("tcp://localhost:61616")
-    connection = factory.create_connection();
-    connection.set_client_id("JRUBY");
-    session = connection.create_session(false, Session::AUTO_ACKNOWLEDGE);
-    topic = session.create_topic("SIMPLE.TOPIC");
+    @connection = factory.create_connection();
+    @connection.set_client_id("JRUBY");
+    session = @connection.create_session(false, Session::AUTO_ACKNOWLEDGE);
+    topic = session.create_topic(@processor.topic);
 
     subscriber = session.create_durable_subscriber(topic, "JRUBY");
     subscriber.set_message_listener(self);
 
-    connection.start();
+  end
+
+  def run
+    @connection.start();
     puts "Listening..."
   end
 end
 
-handler = MessageHandler.new
-handler.run
 
-#
-# class ApplicationProcessor
-#  def on_error(err)
-#    if(err.kind_of? StandardError)
-#      this is normal stuff.
-#    else
-#    end
-#  end
-# end
-#
-# class EventsProcessor < ApplicationProcessor
-#
-#   subscribes_to :events
-#   def on_message(message)
-#     ...do stuff....
-#   end
-# end
-#
+class ApplicationProcessor
+  @@topic_map = {}
+  class<<self
+    def subscribes_to destination_name
+      @@topic_map[self.name] = destination_name
+    end
+  end
+
+  def topic
+    @@topic_map[self.class.name]
+  end
+end
+
+class SimpleProcessor < ApplicationProcessor
+  subscribes_to "SIMPLE.TOPIC"
+
+  def on_message message
+    puts message
+  end
+end
+
+# include each processor
+processors = []
+processors << SimpleProcessor.new
+processors.each do |processor|
+  handler = MessageHandler.new processor
+  handler.run
+end
