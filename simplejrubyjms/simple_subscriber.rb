@@ -16,12 +16,15 @@ class MessageHandler
   def onMessage(serialized_message)
     message_body = serialized_message.get_content.get_data.inject("") { |body, byte| body << byte }
     puts message_body
+    if message_body =~ /throw/
+      raise Exception.new "Throwing from onMessage"
+    end
   end
 
   def run
     factory = ActiveMQConnectionFactory.new("tcp://localhost:61616")
     connection = factory.create_connection();
-    connection.set_client_id("JRUBY" + Time.now.to_i.to_s);
+    connection.set_client_id("JRUBY");
     session = connection.create_session(false, Session::AUTO_ACKNOWLEDGE);
     topic = session.create_topic("SIMPLE.TOPIC");
 
@@ -36,6 +39,16 @@ end
 handler = MessageHandler.new
 handler.run
 
+#
+# class ApplicationProcessor
+#  def on_error(err)
+#    if(err.kind_of? StandardError)
+#      this is normal stuff.
+#    else
+#    end
+#  end
+# end
+#
 # class EventsProcessor < ApplicationProcessor
 #
 #   subscribes_to :events
