@@ -16,9 +16,6 @@ class MessageHandler
   def onMessage(serialized_message)
     message_body = serialized_message.get_content.get_data.inject("") { |body, byte| body << byte }
     @processor.on_message message_body
-    if message_body =~ /throw/
-      raise Exception.new "Throwing from onMessage"
-    end
   end
 
   def initialize(processor)
